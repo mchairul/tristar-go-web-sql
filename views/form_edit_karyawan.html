@@ -1,0 +1,56 @@
+{{ define "form_edit_karyawan" }}
+<!doctype html>
+<html lang="en">
+  <head>
+    {{ template "_header" }}
+    <title>{{ .Title }}</title>
+  </head>
+  <body>
+    
+    <div class="container">
+        <div class="row">
+            <div class="card">
+                <div class="card-body">
+                    <h1>Add Karyawan</h1>
+                    <form action="/posteditkaryawan" method="post">
+                        <input type="hidden" name="id" value="{{ .Data.Id }}">
+                        <div class="mb-3">
+                            <label>NIK</label>
+                            <input type="text" name="nik" class="form-control" 
+                            value="{{ .Data.Nik }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>Nama</label>
+                            <input type="text" name="nama" class="form-control"
+                            value="{{ .Data.Nama }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>Alamat</label>
+                            <textarea name="alamat"
+                            class="form-control">{{ .Data.Alamat }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label>Tanggal Lahir</label>
+                            <input type="text" name="tanggal_lahir" class="form-control"
+                            value="{{ .Data.TglLahir }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>Jenis Kelamin</label>
+                            <select name="jk" class="form-select">
+                                <option value="1" 
+                                    {{ if eq 1 .Data.Jk }}selected{{ end }}>Laki-laki</option>
+                                <option value="2"
+                                    {{ if eq 2 .Data.Jk }}selected{{ end }}>Perempuan</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Tambah</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{ template "_footer" }}
+  </body>
+</html>
+{{ end }}

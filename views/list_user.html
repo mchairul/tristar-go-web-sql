@@ -1,0 +1,55 @@
+{{ define "list_user" }}
+<!doctype html>
+<html lang="en">
+  <head>
+    {{ template "_header" }}
+    <title>{{ .Title }}</title>
+  </head>
+  <body>
+    
+    <div class="container">
+        <div class="row">
+            <div class="card">
+                <div class="card-body">
+                    <a href="/tambahkaryawan" class="btn btn-primary">Tambah Karyawan</a>
+                    <table class="table">
+                        <tr>
+                            <th>NIK</th>
+                            <th>Nama</th>
+                            <th>Alamat</th>
+                            <th>Tanggl Lahir</th>
+                            <th>Jenis Kelamin</th>
+                            <th>Act</th>
+                        </tr>
+                        {{ range .Karyawan }}
+                        <tr>
+                            <td>{{ .Nik }}</td>
+                            <td>{{ .Nama }}</td>
+                            <td>{{ .Alamat }}</td>
+                            <td>{{ .TglLahir }}</td>
+                            <td>{{ .Jk }}</td>
+                            <td>
+                                <a href="editkaryawan?id={{ .Id }}" class="btn btn-warning btn-sm">Edit</a>
+                                <button class="btn btn-danger btn-sm"
+                                    onclick="deleteKaryawan({{ .Id }})">Delete</button>
+                            </td>
+                        </tr>
+                        {{ end }}
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{ template "_footer" }}
+
+    <script>
+        function deleteKaryawan(id) {
+            if (confirm("apakah anda yakin untuk menghapus karyawan ini ?")) {
+                window.location.href = "/deletekaryawan?id=" + id;
+            }
+        }
+    </script>
+  </body>
+</html>
+{{ end }}

@@ -1,0 +1,49 @@
+{{ define "form_karyawan" }}
+<!doctype html>
+<html lang="en">
+  <head>
+    {{ template "_header" }}
+    <title>{{ .Title }}</title>
+  </head>
+  <body>
+    
+    <div class="container">
+        <div class="row">
+            <div class="card">
+                <div class="card-body">
+                    <h1>Add Karyawan</h1>
+                    <form action="/postkaryawan" method="post">
+                        <div class="mb-3">
+                            <label>NIK</label>
+                            <input type="text" name="nik" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>Nama</label>
+                            <input type="text" name="nama" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>Alamat</label>
+                            <textarea name="alamat" class="form-control"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label>Tanggal Lahir</label>
+                            <input type="text" name="tanggal_lahir" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label>Jenis Kelamin</label>
+                            <select name="jk" class="form-select">
+                                <option value="1">Laki-laki</option>
+                                <option value="2">Perempuan</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Tambah</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{ template "_footer" }}
+  </body>
+</html>
+{{ end }}
