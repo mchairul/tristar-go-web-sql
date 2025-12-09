@@ -21,6 +21,9 @@ func main() {
 	http.Handle("/assets/",
 		http.StripPrefix("/assets/",
 			http.FileServer(http.Dir("assets"))))
+	
+	http.HandleFunc("/", handlers.HandleFormLogin());
+	http.HandleFunc("/login", handlers.HandlePostLogin(db))
 
 	http.HandleFunc("/listuser", handlers.HandleListKaryawan(db))
 	http.HandleFunc("/tambahkaryawan", handlers.HandleTambahKaryawan(db))
