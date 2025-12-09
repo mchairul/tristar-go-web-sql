@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"websql/handlers"
+	"websql/middlewares"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -21,16 +22,23 @@ func main() {
 	http.Handle("/assets/",
 		http.StripPrefix("/assets/",
 			http.FileServer(http.Dir("assets"))))
-	
-	http.HandleFunc("/", handlers.HandleFormLogin());
-	http.HandleFunc("/login", handlers.HandlePostLogin(db))
 
-	http.HandleFunc("/listuser", handlers.HandleListKaryawan(db))
-	http.HandleFunc("/tambahkaryawan", handlers.HandleTambahKaryawan(db))
-	http.HandleFunc("/postkaryawan", handlers.HandlePostTambahKaryawan(db))
-	http.HandleFunc("/editkaryawan", handlers.HandleEditKaryawan(db))
-	http.HandleFunc("/posteditkaryawan", handlers.HandlePostEditKaryawan(db))
-	http.HandleFunc("/deletekaryawan", handlers.HandleDeleteKaryawan(db))
+	http.HandleFunc("/", handlers.HandleFormLogin())
+	http.HandleFunc("/login", handlers.HandlePostLogin(db))
+	http.HandleFunc("/logout", handlers.HandleLogout())
+
+	http.HandleFunc("/listkaryawan", middlewares.SessionMiddleware(
+		handlers.HandleListKaryawan(db)))
+	http.HandleFunc("/tambahkaryawan", middlewares.SessionMiddleware(
+		handlers.HandleTambahKaryawan(db)))
+	http.HandleFunc("/postkaryawan", middlewares.SessionMiddleware(
+		handlers.HandlePostTambahKaryawan(db)))
+	http.HandleFunc("/editkaryawan", middlewares.SessionMiddleware(
+		handlers.HandleEditKaryawan(db)))
+	http.HandleFunc("/posteditkaryawan", middlewares.SessionMiddleware(
+		handlers.HandlePostEditKaryawan(db)))
+	http.HandleFunc("/deletekaryawan", middlewares.SessionMiddleware(
+		handlers.HandleDeleteKaryawan(db)))
 
 	fmt.Println("Server Started ...")
 	http.ListenAndServe("localhost:8080", nil)

@@ -5,8 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"text/template"
+	"websql/constants"
 	"websql/typecustom"
+
+	"github.com/gorilla/sessions"
 )
+
+var store = sessions.NewCookieStore([]byte(constants.SessionScret))
 
 func HandleListKaryawan(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -36,18 +41,38 @@ func HandleListKaryawan(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		session, err := store.Get(r, constants.SessionName)
+		session.Options = &sessions.Options{
+			MaxAge: 300,
+			Path:   "/" + constants.SessionName,
+		}
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		username, ok := session.Values["Username"]
+		fmt.Println("userid", username)
+		if !ok {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		var data = typecustom.WebData{
 			"Title":    "List Karyawan",
 			"Karyawan": result,
+			"Username": username,
 		}
 
 		var tmpl = template.Must(template.ParseFiles(
 			"views/_header.html",
 			"views/_footer.html",
-			"views/list_user.html",
+			"views/_nav.html",
+			"views/list_karyawan.html",
 		))
 
-		err = tmpl.ExecuteTemplate(w, "list_user", data)
+		err = tmpl.ExecuteTemplate(w, "list_karyawan", data)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -64,6 +89,7 @@ func HandleTambahKaryawan(db *sql.DB) http.HandlerFunc {
 		var tmpl = template.Must(template.ParseFiles(
 			"views/_header.html",
 			"views/_footer.html",
+			"views/_nav.html",
 			"views/form_karyawan.html",
 		))
 

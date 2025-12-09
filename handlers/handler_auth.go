@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"text/template"
+	"websql/constants"
 	"websql/typecustom"
 
 	"github.com/gorilla/sessions"
@@ -61,15 +62,39 @@ func HandlePostLogin(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		var store = sessions.NewCookieStore([]byte("secret-key"))
-		session, _ := store.Get(r, "session-web")
+		var store = sessions.NewCookieStore([]byte(constants.SessionScret))
+		session, _ := store.Get(r, constants.SessionName)
 
-		session.Values["userid"] = result.Id
-		session.Values["username"] = result.Username
-		session.Values["name"] = result.Name
+		session.Values["Userid"] = result.Id
+		session.Values["Username"] = result.Username
+		session.Values["Name"] = result.Name
 
 		session.Save(r, w)
 
-		w.Write(([]byte("Login Sukses")))
+		http.Redirect(w, r, "/listkaryawan", http.StatusMovedPermanently)
+	}
+}
+
+func HandleLogout() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		store := sessions.NewCookieStore([]byte(constants.SessionScret))
+
+		session, _ := store.Get(r, constants.SessionName)
+
+		session.Options = &sessions.Options{
+			MaxAge: 300,
+			Path:   "/" + constants.SessionName,
+		}
+
+		delete(session.Values, "Userid")
+		delete(session.Values, "Username")
+		delete(session.Values, "Name")
+
+		// buat session langsung expired
+		session.Options.MaxAge = -1
+
+		session.Save(r, w)
+
+		http.Redirect(w, r, "/", http.StatusMovedPermanently)
 	}
 }
