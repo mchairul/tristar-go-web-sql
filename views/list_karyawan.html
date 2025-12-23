@@ -19,6 +19,7 @@
                             <th>Alamat</th>
                             <th>Tanggl Lahir</th>
                             <th>Jenis Kelamin</th>
+                            <th>Foto</th>
                             <th>Act</th>
                         </tr>
                         {{ range .Karyawan }}
@@ -28,6 +29,9 @@
                             <td>{{ .Alamat }}</td>
                             <td>{{ .TglLahir }}</td>
                             <td>{{ .Jk }}</td>
+                            <td>
+                                <img src="{{ .Foto }}" width="100">
+                            </td>
                             <td>
                                 <a href="editkaryawan?id={{ .Id }}" class="btn btn-warning btn-sm">Edit</a>
                                 <button class="btn btn-danger btn-sm"

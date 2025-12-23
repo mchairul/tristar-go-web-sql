@@ -7,4 +7,5 @@ type Karyawan struct {
 	Alamat   string
 	TglLahir string
 	Jk       int
+	Foto     *string
 }

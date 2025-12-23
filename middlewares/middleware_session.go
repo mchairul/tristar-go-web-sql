@@ -2,27 +2,22 @@ package middlewares
 
 import (
 	"net/http"
-	"websql/constants"
-
-	"github.com/gorilla/sessions"
+	"websql/helpers"
 )
-
-var store = sessions.NewCookieStore([]byte(constants.SessionScret))
 
 func SessionMiddleware(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		session, err := store.Get(r, constants.SessionName)
+		session, err := helpers.GetSessionStore(r)
 
 		if err != nil {
 			// jika gagal mendapatkan session
-			http.Redirect(w, r, "/", http.StatusMovedPermanently)
+			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
 
-		userid, ok := session.Values["Userid"]
-		if !ok || userid == nil {
+		if auth, ok := session.Values["Authenticated"].(bool); !ok || !auth {
 			// jika tidak terautentikasi
-			http.Redirect(w, r, "/", http.StatusMovedPermanently)
+			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
 

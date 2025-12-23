@@ -3,18 +3,20 @@ package handlers
 import (
 	"database/sql"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"text/template"
-	"websql/constants"
+	"websql/helpers"
 	"websql/typecustom"
 
-	"github.com/gorilla/sessions"
+	"github.com/google/uuid"
 )
-
-var store = sessions.NewCookieStore([]byte(constants.SessionScret))
 
 func HandleListKaryawan(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		helpers.SetHeaders(w, r)
 		rows, err := db.Query("SELECT * FROM karyawan")
 		if err != nil {
 			fmt.Println(err.Error())
@@ -26,7 +28,7 @@ func HandleListKaryawan(db *sql.DB) http.HandlerFunc {
 
 		for rows.Next() {
 			var each = typecustom.Karyawan{}
-			var err = rows.Scan(&each.Id, &each.Nik, &each.Nama, &each.Alamat, &each.TglLahir, &each.Jk)
+			var err = rows.Scan(&each.Id, &each.Nik, &each.Nama, &each.Alamat, &each.TglLahir, &each.Jk, &each.Foto)
 
 			if err != nil {
 				w.Write([]byte("error : " + err.Error()))
@@ -41,11 +43,7 @@ func HandleListKaryawan(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		session, err := store.Get(r, constants.SessionName)
-		session.Options = &sessions.Options{
-			MaxAge: 300,
-			Path:   "/" + constants.SessionName,
-		}
+		session, err := helpers.GetSessionStore(r)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -55,7 +53,7 @@ func HandleListKaryawan(db *sql.DB) http.HandlerFunc {
 		username, ok := session.Values["Username"]
 		fmt.Println("userid", username)
 		if !ok {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "gagal mendapatkan session Username", http.StatusInternalServerError)
 			return
 		}
 
@@ -82,6 +80,7 @@ func HandleListKaryawan(db *sql.DB) http.HandlerFunc {
 
 func HandleTambahKaryawan(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		helpers.SetHeaders(w, r)
 		var data = typecustom.WebData{
 			"Title": "Tambah Karyawan",
 		}
@@ -103,13 +102,38 @@ func HandleTambahKaryawan(db *sql.DB) http.HandlerFunc {
 
 func HandlePostTambahKaryawan(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		helpers.SetHeaders(w, r)
 		nik := r.FormValue("nik")
 		nama := r.FormValue("nama")
 		alamat := r.FormValue("alamat")
 		tanggalLahir := r.FormValue("tanggal_lahir")
 		jk := r.FormValue("jk")
 
-		strQuery := "INSERT INTO karyawan (nik, nama, alamat, tanggal_lahir, jenis_kelamin) VALUES (?,?,?,?,?)"
+		fileFoto, handlerFile, err := r.FormFile("foto")
+
+		if err != nil {
+			fmt.Println("error form file")
+		}
+
+		defer fileFoto.Close()
+
+		fmt.Println("Size foto ", handlerFile.Size)
+
+		fileName := handlerFile.Filename
+		extension := filepath.Ext(fileName)
+		uniqueFileName := uuid.New().String() + extension
+
+		pathFile, err := os.Create("./assets/images/uploads/" + uniqueFileName)
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer pathFile.Close()
+
+		if _, err := io.Copy(pathFile, fileFoto); err != nil {
+			fmt.Println("error upload")
+		}
+
+		strQuery := "INSERT INTO karyawan (nik, nama, alamat, tanggal_lahir, jenis_kelamin, foto) VALUES (?,?,?,?,?,?)"
 		statementInsert, err := db.Prepare(strQuery)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -117,19 +141,21 @@ func HandlePostTambahKaryawan(db *sql.DB) http.HandlerFunc {
 		}
 		defer statementInsert.Close()
 
-		_, err = statementInsert.Exec(nik, nama, alamat, tanggalLahir, jk)
+		pathFoto := "assets/images/uploads/" + uniqueFileName
+		_, err = statementInsert.Exec(nik, nama, alamat, tanggalLahir, jk, pathFoto)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		// redirec
-		http.Redirect(w, r, "/listuser", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/listkaryawan", http.StatusSeeOther)
 	}
 }
 
 func HandleEditKaryawan(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		helpers.SetHeaders(w, r)
 		queryParam := r.URL.Query()
 
 		id := queryParam.Get("id")
@@ -157,6 +183,7 @@ func HandleEditKaryawan(db *sql.DB) http.HandlerFunc {
 		var tmpl = template.Must(template.ParseFiles(
 			"views/_header.html",
 			"views/_footer.html",
+			"views/_nav.html",
 			"views/form_edit_karyawan.html",
 		))
 
@@ -170,6 +197,7 @@ func HandleEditKaryawan(db *sql.DB) http.HandlerFunc {
 
 func HandlePostEditKaryawan(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		helpers.SetHeaders(w, r)
 		id := r.FormValue("id")
 		nik := r.FormValue("nik")
 		nama := r.FormValue("nama")
@@ -195,12 +223,13 @@ func HandlePostEditKaryawan(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		http.Redirect(w, r, "/listuser", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/listuser", http.StatusSeeOther)
 	}
 }
 
 func HandleDeleteKaryawan(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		helpers.SetHeaders(w, r)
 		queryParam := r.URL.Query()
 
 		id := queryParam.Get("id")
@@ -220,6 +249,6 @@ func HandleDeleteKaryawan(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		http.Redirect(w, r, "/listuser", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/listuser", http.StatusSeeOther)
 	}
 }

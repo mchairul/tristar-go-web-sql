@@ -1,0 +1,4 @@
+/assets/images/uploads/*
+!/assets/images/uploads/index.html
+/sessions/*
+!/sessions/index.html
