@@ -6,7 +6,7 @@
     <title>{{ .Title }}</title>
   </head>
   <body>
-    
+    {{ template "_nav" .}}
     <div class="container">
         <div class="row">
             <div class="card">
@@ -15,26 +15,54 @@
                     <form action="/postkaryawan" method="post" enctype="multipart/form-data">
                         <div class="mb-3">
                             <label>NIK</label>
-                            <input type="text" name="nik" class="form-control" required>
+                            <input type="text" name="nik"
+                                class="form-control {{ if index . "ValidationNik" }} is-invalid {{ end }}" required>
+                            {{ if index . "ValidationNik" }}
+                            <div class="invalid-feedback">
+                                {{ .ValidationNik }}
+                            </div>
+                            {{ end }}
                         </div>
                         <div class="mb-3">
                             <label>Nama</label>
-                            <input type="text" name="nama" class="form-control" required>
+                            <input type="text" name="nama" class="form-control {{ if index . "ValidationNama" }} is-invalid {{ end }}" required>
+                            {{ if index . "ValidationNama" }}
+                            <div class="invalid-feedback">
+                                {{ .ValidationNama }}
+                            </div>
+                            {{ end }}
                         </div>
                         <div class="mb-3">
                             <label>Alamat</label>
-                            <textarea name="alamat" class="form-control"></textarea>
+                            <textarea name="alamat" class="form-control {{ if index . "ValidationAlamat" }} is-invalid {{ end }}"></textarea>
+                            {{ if index . "ValidationAlamat" }}
+                            <div class="invalid-feedback">
+                                {{ .ValidationAlamat }}
+                            </div>
+                            {{ end }}
                         </div>
                         <div class="mb-3">
                             <label>Tanggal Lahir</label>
-                            <input type="text" name="tanggal_lahir" class="form-control" required>
+                            <input type="text" name="tanggal_lahir"
+                                class="form-control {{ if index . "ValidationTglLahir" }} is-invalid {{ end }}" required>
+                            {{ if index . "ValidationTglLahir" }}
+                            <div class="invalid-feedback">
+                                {{ .ValidationTglLahir }}
+                            </div>
+                            {{ end }}
                         </div>
                         <div class="mb-3">
                             <label>Jenis Kelamin</label>
-                            <select name="jk" class="form-select">
+                            <select name="jk" class="form-select {{ if index . "ValidationJk" }} is-invalid {{ end }}">
+                                <option value="">-- Pilih Jenis Kelamin --</option>
                                 <option value="1">Laki-laki</option>
                                 <option value="2">Perempuan</option>
                             </select>
+                            {{ if index . "ValidationJk" }}
+                            <div class="invalid-feedback">
+                                {{ .ValidationJk }}
+                            </div>
+                            {{ end }}
                         </div>
                         <div class="mb-3">
                             <label>Foto</label>

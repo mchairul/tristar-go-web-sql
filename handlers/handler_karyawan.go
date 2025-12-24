@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 	"websql/helpers"
 	"websql/typecustom"
@@ -81,8 +82,29 @@ func HandleListKaryawan(db *sql.DB) http.HandlerFunc {
 func HandleTambahKaryawan(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		helpers.SetHeaders(w, r)
+
+		session, err := helpers.GetSessionStore(r)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		username, ok := session.Values["Username"]
+		fmt.Println("username", username)
+		if !ok {
+			http.Error(w, "gagal mendapatkan session Username", http.StatusInternalServerError)
+			return
+		}
+
 		var data = typecustom.WebData{
-			"Title": "Tambah Karyawan",
+			"Title":              "Tambah Karyawan",
+			"Username":           username,
+			"ValidationNik":      helpers.GetFlash(session, r, w, "validation-nik"),
+			"ValidationNama":     helpers.GetFlash(session, r, w, "validation-nama"),
+			"ValidationAlamat":   helpers.GetFlash(session, r, w, "validation-alamat"),
+			"ValidationTglLahir": helpers.GetFlash(session, r, w, "validation-tgl-lahir"),
+			"ValidationJk":       helpers.GetFlash(session, r, w, "validation-jk"),
 		}
 
 		var tmpl = template.Must(template.ParseFiles(
@@ -92,7 +114,7 @@ func HandleTambahKaryawan(db *sql.DB) http.HandlerFunc {
 			"views/form_karyawan.html",
 		))
 
-		err := tmpl.ExecuteTemplate(w, "form_karyawan", data)
+		err = tmpl.ExecuteTemplate(w, "form_karyawan", data)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -103,59 +125,109 @@ func HandleTambahKaryawan(db *sql.DB) http.HandlerFunc {
 func HandlePostTambahKaryawan(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		helpers.SetHeaders(w, r)
+
+		isFormOk := true
+		session, err := helpers.GetSessionStore(r)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		nik := r.FormValue("nik")
 		nama := r.FormValue("nama")
 		alamat := r.FormValue("alamat")
 		tanggalLahir := r.FormValue("tanggal_lahir")
 		jk := r.FormValue("jk")
 
-		fileFoto, handlerFile, err := r.FormFile("foto")
-
-		if err != nil {
-			fmt.Println("error form file")
+		if strings.TrimSpace(nik) == "" {
+			isFormOk = false
+			helpers.SetFlash(session, r, w, "validation-nik", "NIK Wajib diisi")
 		}
 
-		defer fileFoto.Close()
-
-		fmt.Println("Size foto ", handlerFile.Size)
-
-		fileName := handlerFile.Filename
-		extension := filepath.Ext(fileName)
-		uniqueFileName := uuid.New().String() + extension
-
-		pathFile, err := os.Create("./assets/images/uploads/" + uniqueFileName)
-		if err != nil {
-			fmt.Println(err)
-		}
-		defer pathFile.Close()
-
-		if _, err := io.Copy(pathFile, fileFoto); err != nil {
-			fmt.Println("error upload")
+		if strings.TrimSpace(nama) == "" {
+			isFormOk = false
+			helpers.SetFlash(session, r, w, "validation-nama", "Nama Wajib diisi")
 		}
 
-		strQuery := "INSERT INTO karyawan (nik, nama, alamat, tanggal_lahir, jenis_kelamin, foto) VALUES (?,?,?,?,?,?)"
-		statementInsert, err := db.Prepare(strQuery)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer statementInsert.Close()
-
-		pathFoto := "assets/images/uploads/" + uniqueFileName
-		_, err = statementInsert.Exec(nik, nama, alamat, tanggalLahir, jk, pathFoto)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		if strings.TrimSpace(alamat) == "" {
+			isFormOk = false
+			helpers.SetFlash(session, r, w, "validation-alamat", "Alamat Wajib diisi")
 		}
 
-		// redirec
-		http.Redirect(w, r, "/listkaryawan", http.StatusSeeOther)
+		if strings.TrimSpace(tanggalLahir) == "" || !helpers.CheckTanggal(tanggalLahir) {
+			isFormOk = false
+			helpers.SetFlash(session, r, w, "validation-tgl-lahir", "Harap isi tanggal lahir dengan benar")
+		}
+
+		if strings.TrimSpace(jk) == "" {
+			isFormOk = false
+			helpers.SetFlash(session, r, w, "validation-jk", "Jenis Kelamin Wajib diisi")
+		}
+
+		if isFormOk {
+			fileFoto, handlerFile, err := r.FormFile("foto")
+
+			if err != nil {
+				fmt.Println("error form file")
+			}
+
+			defer fileFoto.Close()
+
+			fmt.Println("Size foto ", handlerFile.Size)
+
+			fileName := handlerFile.Filename
+			extension := filepath.Ext(fileName)
+			uniqueFileName := uuid.New().String() + extension
+
+			pathFile, err := os.Create("./assets/images/uploads/" + uniqueFileName)
+			if err != nil {
+				fmt.Println(err)
+			}
+			defer pathFile.Close()
+
+			if _, err := io.Copy(pathFile, fileFoto); err != nil {
+				fmt.Println("error upload")
+			}
+
+			strQuery := "INSERT INTO karyawan (nik, nama, alamat, tanggal_lahir, jenis_kelamin, foto) VALUES (?,?,?,?,?,?)"
+			statementInsert, err := db.Prepare(strQuery)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer statementInsert.Close()
+
+			pathFoto := "assets/images/uploads/" + uniqueFileName
+			_, err = statementInsert.Exec(nik, nama, alamat, tanggalLahir, jk, pathFoto)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// redirect
+			http.Redirect(w, r, "/listkaryawan", http.StatusSeeOther)
+		} else {
+			http.Redirect(w, r, "/tambahkaryawan", http.StatusSeeOther)
+		}
 	}
 }
 
 func HandleEditKaryawan(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		helpers.SetHeaders(w, r)
+		session, err := helpers.GetSessionStore(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		username, ok := session.Values["Username"]
+		fmt.Println("userid", username)
+		if !ok {
+			http.Error(w, "gagal mendapatkan session Username", http.StatusInternalServerError)
+			return
+		}
 		queryParam := r.URL.Query()
 
 		id := queryParam.Get("id")
@@ -167,8 +239,8 @@ func HandleEditKaryawan(db *sql.DB) http.HandlerFunc {
 
 		var result = typecustom.Karyawan{}
 
-		err := db.QueryRow("SELECT * FROM karyawan WHERE id = ?", id).
-			Scan(&result.Id, &result.Nik, &result.Nama, &result.Alamat, &result.TglLahir, &result.Jk)
+		err = db.QueryRow("SELECT * FROM karyawan WHERE id = ?", id).
+			Scan(&result.Id, &result.Nik, &result.Nama, &result.Alamat, &result.TglLahir, &result.Jk, &result.Foto)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -176,8 +248,9 @@ func HandleEditKaryawan(db *sql.DB) http.HandlerFunc {
 		}
 
 		var data = typecustom.WebData{
-			"Title": "Edit Karyawan",
-			"Data":  result,
+			"Title":    "Edit Karyawan",
+			"Data":     result,
+			"Username": username,
 		}
 
 		var tmpl = template.Must(template.ParseFiles(
@@ -223,7 +296,7 @@ func HandlePostEditKaryawan(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		http.Redirect(w, r, "/listuser", http.StatusSeeOther)
+		http.Redirect(w, r, "/listkaryawan", http.StatusSeeOther)
 	}
 }
 
@@ -249,6 +322,6 @@ func HandleDeleteKaryawan(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		http.Redirect(w, r, "/listuser", http.StatusSeeOther)
+		http.Redirect(w, r, "/listkaryawan", http.StatusSeeOther)
 	}
 }

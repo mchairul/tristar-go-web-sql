@@ -15,5 +15,6 @@ func GetSessionStore(r *http.Request) (*sessions.Session, error) {
 	// 	MaxAge:   0,
 	// 	HttpOnly: true,
 	// }
+	Session.MaxLength(8192)
 	return Session.Get(r, constants.SessionName)
 }
